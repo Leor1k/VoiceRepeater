@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VoiceModul": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

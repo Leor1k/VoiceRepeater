@@ -1,16 +1,16 @@
-﻿
-public class VoiceUdpBackgroundService : BackgroundService
+﻿public class VoiceUdpBackgroundService : BackgroundService
 {
-    private readonly VoiceUdpServer _voiceUdpServer;
+    private readonly IServiceProvider _serviceProvider;
 
-    public VoiceUdpBackgroundService(VoiceUdpServer voiceUdpServer)
+    public VoiceUdpBackgroundService(IServiceProvider serviceProvider)
     {
-        _voiceUdpServer = voiceUdpServer;
+        _serviceProvider = serviceProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Запуск UDP-сервера, если токен не отменен
-        await _voiceUdpServer.StartListeningAsync();
+        using var scope = _serviceProvider.CreateScope();
+        var voiceUdpServer = scope.ServiceProvider.GetRequiredService<VoiceUdpServer>(); 
+        await voiceUdpServer.StartListeningAsync();
     }
 }

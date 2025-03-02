@@ -1,7 +1,7 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using VoiceModul.Models;
 using VoiceModul.Requessts;
 using VoiceModul.SignalR;
 
@@ -9,11 +9,12 @@ using VoiceModul.SignalR;
 [Route("voice")]
 public class VoiceController : ControllerBase
 {
-    private static RoomManager _roomManager = new RoomManager();
+    private readonly RoomManager _roomManager;
     private readonly IHubContext<VoiceHub> _hubContext;
 
-    public VoiceController(IHubContext<VoiceHub> hubContext)
+    public VoiceController(RoomManager roomManager, IHubContext<VoiceHub> hubContext)
     {
+        _roomManager = roomManager;
         _hubContext = hubContext;
     }
 
@@ -26,73 +27,55 @@ public class VoiceController : ControllerBase
             return BadRequest("Некорректный запрос.");
         }
 
-        Console.Clear();
-        Console.WriteLine("---[StartCall]---");
+        Console.WriteLine("---------[StartCall]--------");
 
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        var clientEndPoint = new IPEndPoint(clientIp, 0);
+        User callerUser = new User(request.CallerId, request.RoomId);
+        Console.WriteLine($"Создан User с {callerUser.UserId}");
 
-        Console.WriteLine($"[StartCall] Получен запрос на создание звонка в комнате: {request.RoomId} от {clientIp}");
+        // Добавляем пользователя в комнату
+        _roomManager.AddClientToRoom(callerUser);
+        Console.WriteLine($"[StartCall] Пользователь {callerUser.UserId} добавлен в комнату {request.RoomId}");
 
-        if (_roomManager.GetRoomForClient(clientEndPoint) == null)
+        // Уведомляем участников комнаты о звонке
+        request.participantIds ??= new List<string>();
+
+        Console.WriteLine($"[StartCall] Уведомление участников комнаты {request.RoomId} от звонящего {callerUser.UserId}");
+        foreach (var part in request.participantIds)
         {
-            Console.WriteLine($"[StartCall] Комната {request.RoomId} не существует. Создаём её.");
-            _roomManager.AddClientToRoom(request.RoomId, clientEndPoint, null);
-            Console.WriteLine($"[StartCall] Пользователь {clientIp} добавлен в комнату {request.RoomId}");
-
-            request.participantIds ??= new List<string>(); // Фиксируем null participantIds
-
-            foreach (var part in request.participantIds)
-            {
-                await _hubContext.Clients.Group(part).SendAsync("IncomingCall", request.RoomId, request.CallerId);
-                Console.WriteLine($"[StartCall] Уведомляем участников: {string.Join(", ", part)}");
-            }
-
-            return Ok($"Комната {request.RoomId} создана.");
+            await _hubContext.Clients.Group(part).SendAsync("IncomingCall", request.RoomId, request.CallerId);
+            Console.WriteLine($"[StartCall] Уведомляем участника: {part}");
         }
 
-        Console.WriteLine($"[StartCall] Комната {request.RoomId} уже существует.");
-        return BadRequest("[StartCall] Комната уже существует.");
+        Console.WriteLine($"===========[StartCall]===========");
+        return Ok($"[StartCall] Комната {request.RoomId} создана.");
     }
-
-
-
 
     [HttpPost("confirm-call")]
     public IActionResult ConfirmCall([FromBody] CallConfirmation request)
     {
-        try
-        {
-            var clientIp = HttpContext.Connection.RemoteIpAddress;
-            var clientEndPoint = new IPEndPoint(clientIp, 0);
+        Console.WriteLine("---------[confirm-call]--------");
+        Console.WriteLine($"[ConfirmCall] Принятие звонка пользователем {request.UserId} в комнате {request.RoomId}");
 
-            Console.WriteLine($"[ConfirmCall] Принятие звонка {clientIp} в комнате {request.RoomId}");
+        User confirmUser = new User(request.UserId, request.RoomId);
 
-            if (_roomManager.GetRoomForClient(clientEndPoint) == null)
-            {
-                _roomManager.AddClientToRoom(request.RoomId, clientEndPoint, null);
-                return Ok($"[ConfirmCall] Пользователь {clientIp} принял приглашение в комнату {request.RoomId}.");
-            }
+        _roomManager.AddClientToRoom(confirmUser);
+        Console.WriteLine($"[ConfirmCall] Пользователь {confirmUser.UserId} успешно добавлен в {confirmUser.RoomId}");
 
-            return NotFound("Комната не найдена.");
-        }
-        catch (Exception ex)
-        {
-            return BadRequest($"Ошибка: {ex.Message}");
-        }
+        Console.WriteLine($"===========[confirm-call]===========");
+        return Ok($"[ConfirmCall] Пользователь {confirmUser.UserId} принял приглашение в комнату {confirmUser.RoomId}.");
     }
 
     [HttpPost("end-call")]
     public IActionResult EndCall([FromBody] CallEndRequest request)
     {
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        var clientEndPoint = new IPEndPoint(clientIp, 0);
+        Console.WriteLine("---------[EndCall]--------");
 
-        Console.WriteLine($"[EndCall] Завершение звонка от {clientIp} в комнате {request.RoomId}");
+        User userEnd = new User(request.UserId, request.RoomId);
+        Console.WriteLine($"[EndCall] Завершение звонка от {userEnd.UserId} в комнате {userEnd.RoomId}");
 
-        _roomManager.RemoveClientFromRoom(request.RoomId, clientEndPoint);
+        _roomManager.RemoveClientFromRoom(userEnd);
 
-        return Ok($"[EndCall] Пользователь {clientIp} покинул комнату {request.RoomId}.");
+        Console.WriteLine($"===========[EndCall]===========");
+        return Ok($"[EndCall] Пользователь {userEnd.UserId} покинул комнату {userEnd.RoomId}.");
     }
-
 }

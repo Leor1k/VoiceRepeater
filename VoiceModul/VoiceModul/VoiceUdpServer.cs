@@ -1,29 +1,33 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.SignalR;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using VoiceModul.Models;
+using VoiceModul.SignalR;
 
 public class VoiceUdpServer
 {
     private readonly UdpClient _udpServer;
-    private readonly int _port;
+    private readonly int _port = 5005;
     private readonly RoomManager _roomManager;
-    private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
-    private readonly Dictionary<IPAddress, int> _clientPorts = new Dictionary<IPAddress, int>(); // Сохранение портов клиентов
+    private readonly ConcurrentDictionary<string, User> _userCache = new();
+    private readonly IHubContext<VoiceHub> _hubContext; 
 
-    public VoiceUdpServer(int port, RoomManager roomManager)
+    public VoiceUdpServer(RoomManager roomManager, IHubContext<VoiceHub> hubContext)
     {
-        _port = port;
         _roomManager = roomManager;
+        _hubContext = hubContext;
+
         _udpServer = new UdpClient(_port);
-        _udpServer.Client.ReceiveBufferSize = 65536; // 64 KB
-        _udpServer.Client.SendBufferSize = 65536;    // 64 KB
+        _udpServer.Client.ReceiveBufferSize = 65536;
+        _udpServer.Client.SendBufferSize = 65536;
     }
 
     public async Task StartListeningAsync()
     {
-        Console.WriteLine($"----------UDP сервер запущен на порту {_port}");
+        Console.WriteLine($"----------UDP сервер запущен на порту {_port}----------");
 
         while (true)
         {
@@ -33,29 +37,52 @@ public class VoiceUdpServer
                 byte[] receivedData = result.Buffer;
                 IPEndPoint sender = result.RemoteEndPoint;
 
-                Console.WriteLine($"[VoiceUdpServer] Получены данные от {sender.Address}:{sender.Port}, {receivedData.Length} байт");
-
-                // Сохраняем порт клиента
-                if (!_clientPorts.ContainsKey(sender.Address))
+                if (receivedData.Length < 4)
                 {
-                    _clientPorts[sender.Address] = sender.Port;
-                    Console.WriteLine($"[VoiceUdpServer] Запомнен порт {sender.Port} для {sender.Address}");
+                    Console.WriteLine($"[VoiceUdpServer] Ошибка: слишком короткий пакет от {sender}");
+                    continue;
                 }
 
-                string roomName = _roomManager.GetRoomForClient(sender);
-                if (roomName == null)
+                string userId = BitConverter.ToInt32(receivedData, 0).ToString();
+                Console.WriteLine($"[VoiceUdpServer] Получены данные от {sender} (UserId: {userId}), {receivedData.Length} байт");
+
+                if (!_userCache.TryGetValue(userId, out User? user))
                 {
-                    roomName = "default_room";
-                    _roomManager.AddClientToRoom(roomName, sender, _udpServer);
-                    Console.WriteLine($"[StartListeningAsync] ---Авто-регистрация клиента {sender} в {roomName}");
+                    string? roomId = _roomManager.GetUserRoomId(userId);
+                    if (roomId == null)
+                    {
+                        Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден в комнатах. Игнорируем пакет.");
+                        continue;
+                    }
+                    user = _roomManager.GetUserById(userId, roomId);
+                    if (user != null)
+                    {
+                        _userCache[userId] = user;
+                        Console.WriteLine($"[VoiceUdpServer] Добавлен в кеш: {user.UserId}");
+                        await _hubContext.Clients.Group(userId).SendAsync("ReceiveUdpPort", sender.Port);
+                        Console.WriteLine($"Отправлен UDP-порт {sender.Port} пользователю {userId}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден. Игнорируем пакет.");
+                        continue;
+                    }
                 }
 
-                Console.WriteLine($"---- Рассылка пакета от {sender} в комнату {roomName}");
-                await _roomManager.BroadcastToRoomAsync(roomName, receivedData, sender, _udpServer);
+                if (user.UserEndPoin == null)
+                {
+                    _roomManager.UpdateUserEndPoint(user.UserId, user.RoomId, sender);
+
+                    await _hubContext.Clients.Group(user.UserId)
+                        .SendAsync("ReceiveUdpPort", sender.Port);
+                    Console.WriteLine($"[VoiceUdpServer] Отправлен UDP-порт {sender.Port} пользователю {user.UserId}");
+                }
+                await _roomManager.EchoTestAsync(receivedData, user, _udpServer);
+                //await _roomManager.BroadcastToRoomAsync(user.RoomId, receivedData, user, _udpServer);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"----Ошибка в UDP-сервере: {ex.Message}");
+                Console.WriteLine($"[VoiceUdpServer] Ошибка: {ex.Message}");
             }
         }
     }

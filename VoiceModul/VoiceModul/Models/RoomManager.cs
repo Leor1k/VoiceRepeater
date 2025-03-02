@@ -1,135 +1,119 @@
 ﻿using System.Collections.Concurrent;
-using System.Net.Sockets;
 using System.Net;
-using System;
+using System.Net.Sockets;
+using System.Text;
+using VoiceModul.Models;
 
 public class RoomManager
 {
-    private ConcurrentDictionary<string, List<IPEndPoint>> _rooms = new();
-    private ConcurrentDictionary<IPEndPoint, string> _clientRoomMap = new();
-    private readonly SemaphoreSlim _sendSemaphore = new(5); // Ограничение на 5 параллельных отправок
-    private readonly Dictionary<IPEndPoint, int> _logCounts = new Dictionary<IPEndPoint, int>();
+    private readonly ConcurrentDictionary<string, List<User>> _rooms = new();
 
-
-    public void AddClientToRoom(string roomName, IPEndPoint clientEndPoint, UdpClient udpClient)
+    public void AddClientToRoom(User user)
     {
-        Console.WriteLine($"[AddClientToRoom] Попытка добавить клиента с адресом {clientEndPoint} в комнату {roomName}");
+        Console.WriteLine($"[AddClientToRoom] Попытка добавить пользователя {user.UserId} в комнату {user.RoomId}");
 
-        if (!_rooms.ContainsKey(roomName))
+        _rooms.AddOrUpdate(user.RoomId, new List<User> { user }, (key, list) =>
         {
-            _rooms[roomName] = new List<IPEndPoint>();
-            Console.WriteLine($"[AddClientToRoom] Комната {roomName} не существует, создаём новую.");
-        }
+            if (!list.Any(u => u.UserId == user.UserId))
+            {
+                list.Add(user);
+                Console.WriteLine($"[AddClientToRoom] Пользователь {user.UserId} добавлен в комнату {user.RoomId}");
+            }
+            return list;
+        });
+    }
 
-        if (!_rooms[roomName].Contains(clientEndPoint))
+    public void RemoveClientFromRoom(User user)
+    {
+        if (_rooms.ContainsKey(user.RoomId))
         {
-            _rooms[roomName].Add(clientEndPoint);
-            _clientRoomMap[clientEndPoint] = roomName;
-            Console.WriteLine($"[AddClientToRoom] Клиент {clientEndPoint} добавлен в комнату {roomName}");
-            Console.WriteLine($"[AddClientToRoom] {roomName}] Текущие участники:");
-            foreach (var participant in _rooms[roomName])
-            {
-                Console.WriteLine($"- {participant}");
-            }
-            if(udpClient != null)
-            {
-                byte[] testMessage = System.Text.Encoding.UTF8.GetBytes("Welcome to the room from Server");
-                udpClient.SendAsync(testMessage, testMessage.Length, clientEndPoint);
-                Console.WriteLine($"[AddClientToRoom] отправил {clientEndPoint} тестовое сообщение");
-            }
-            else
-            {
-                Console.WriteLine($"[AddClientToRoom] Upd был пуст");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"[AddClientToRoom] Клиент {clientEndPoint} уже присутствует в комнате {roomName}");
+            _rooms[user.RoomId].RemoveAll(u => u.UserId == user.UserId);
+            Console.WriteLine($"[RemoveClientFromRoom] Пользователь {user.UserId} покинул комнату {user.RoomId}");
+
+            CheckAndRemoveEmptyRoom(user.RoomId);
         }
     }
 
-
-    public void RemoveClientFromRoom(string roomName, IPEndPoint client)
+    private void CheckAndRemoveEmptyRoom(string roomId)
     {
-        if (_rooms.ContainsKey(roomName))
+        if (_rooms.TryGetValue(roomId, out var users) && users.Count == 0)
         {
-            _rooms[roomName].Remove(client);
-            Console.WriteLine($"🚪 Клиент {client} покинул комнату {roomName}");
-
-            // Если остался 1 клиент – удаляем комнату
-            CheckAndRemoveEmptyRoom(roomName);
+            _rooms.TryRemove(roomId, out _);
+            Console.WriteLine($"❌ Комната {roomId} удалена");
         }
     }
 
-    private void CheckAndRemoveEmptyRoom(string roomName)
+    public User? GetUserById(string userId, string roomId)
     {
-        if (_rooms.ContainsKey(roomName) && _rooms[roomName].Count <= 1)
-        {
-            var lastClient = _rooms[roomName].FirstOrDefault(); // Получаем последнего клиента (если есть)
+        return _rooms.TryGetValue(roomId, out var users) ? users.FirstOrDefault(u => u.UserId == userId) : null;
+    }
 
-            if (lastClient != null)
+    public List<User> GetClientsInRoom(string roomId)
+    {
+        return _rooms.TryGetValue(roomId, out var users) ? users : new List<User>();
+    }
+    public string? GetUserRoomId(string userId)
+    {
+        foreach (var room in _rooms)
+        {
+            if (room.Value.Any(u => u.UserId == userId))
             {
-                // Отправляем сообщение последнему пользователю, что звонок завершён
-                Console.WriteLine($"📢 Звонок в {roomName} завершён, клиент {lastClient} уведомлён");
+                return room.Key; 
             }
-
-            // Удаляем комнату
-            _rooms.TryRemove(roomName, out _);  // Используем TryRemove для безопасного удаления
-            Console.WriteLine($"❌ Комната {roomName} удалена");
         }
-    }
-
-    public string GetRoomForClient(IPEndPoint clientEndPoint)
-    {
-        if (_clientRoomMap.ContainsKey(clientEndPoint))
-        {
-            string roomName = _clientRoomMap[clientEndPoint];
-            Console.WriteLine($"[GetRoomForClient] Клиент {clientEndPoint} находится в комнате {roomName}");
-            return roomName;
-        }
-
-        Console.WriteLine($"Клиент {clientEndPoint} не найден в комнатах.");
         return null;
     }
 
-
-    public List<IPEndPoint> GetClientsInRoom(string roomName)
+    public void UpdateUserEndPoint(string userId, string roomId, IPEndPoint endPoint)
     {
-        return _rooms.ContainsKey(roomName) ? _rooms[roomName] : new List<IPEndPoint>();
+        var user = GetUserById(userId, roomId);
+        if (user != null)
+        {
+            user.UserEndPoin = endPoint;
+            Console.WriteLine($"[UpdateUserEndPoint] Обновлён IPEndPoint для {user.UserId}: {endPoint}");
+        }
     }
 
-    public async Task BroadcastToRoomAsync(string roomName, byte[] data, IPEndPoint sender, UdpClient udpClient)
+    public async Task BroadcastToRoomAsync(string roomId, byte[] data, User sender, UdpClient udpClient)
     {
         try
         {
-            Console.WriteLine("[BroadcastToRoomAsync] Начало BroadCast");
-            // Увеличиваем буфер отправки для UDP-сокета
-            udpClient.Client.SendBufferSize = 65536; // 64 KB
+            Console.WriteLine($"[BroadcastToRoomAsync] Начало отправки в комнату {roomId}");
 
-            foreach (var client in GetClientsInRoom(roomName))
+            foreach (var user in GetClientsInRoom(roomId))
             {
-                if (!client.Equals(sender))  // Не отправляем обратно отправителю
+                if (user.UserId != sender.UserId && user.UserEndPoin != null)
                 {
-                    await udpClient.SendAsync(data, data.Length, client);
-                    Console.WriteLine($"[BroadcastToRoomAsync] Отправка данных на {client} а конкретнее {client.Address}:{client.Port}");
-
-                    // Ограничиваем количество логов
-                    if (!_logCounts.ContainsKey(client))
-                        _logCounts[client] = 0;
-
-                    if (_logCounts[client] < 3)
-                    {
-                        Console.WriteLine($"[BroadcastToRoomAsync] Пакет отправлен клиенту {client} с {sender.Address}:{sender.Port}");
-                        _logCounts[client]++;
-                    }
+                    await udpClient.SendAsync(data, data.Length, user.UserEndPoin);
+                    Console.WriteLine($"[BroadcastToRoomAsync] Отправка данных клиенту {user.UserEndPoin} от {sender.UserEndPoin}");
                 }
             }
         }
-        finally
+        catch (Exception ex)
         {
-            _sendSemaphore.Release();
+            Console.WriteLine($"[BroadcastToRoomAsync] Ошибка при отправке данных: {ex.Message}");
         }
     }
+    public async Task EchoTestAsync(byte[] data, User sender, UdpClient udpClient)
+    {
+        try
+        {
+            if (sender.UserEndPoin != null)
+            {
+                Console.WriteLine($"[EchoTestAsync] Отправка тестового ответа клиенту {sender.UserEndPoin}");
 
+                byte[] response = Encoding.UTF8.GetBytes("TEST_RESPONSE");
+                await udpClient.SendAsync(response, response.Length, sender.UserEndPoin);
+            }
+            else
+            {
+                Console.WriteLine($"[EchoTestAsync] У клиента {sender.UserId} нет IPEndPoint!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EchoTestAsync] Ошибка при отправке тестового ответа: {ex.Message}");
+        }
+    }
 
 }

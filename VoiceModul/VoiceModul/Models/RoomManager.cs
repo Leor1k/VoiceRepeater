@@ -1,34 +1,43 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using VoiceModul.Models;
 
 public class RoomManager
 {
-    private readonly ConcurrentDictionary<string, List<User>> _rooms = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, User>> _rooms = new();
 
     public void AddClientToRoom(User user)
     {
         Console.WriteLine($"[AddClientToRoom] Попытка добавить пользователя {user.UserId} в комнату {user.RoomId}");
 
-        _rooms.AddOrUpdate(user.RoomId, new List<User> { user }, (key, list) =>
+        var users = _rooms.GetOrAdd(user.RoomId, _ => new ConcurrentDictionary<string, User>());
+        if (users.TryAdd(user.UserId, user))
         {
-            if (!list.Any(u => u.UserId == user.UserId))
-            {
-                list.Add(user);
-                Console.WriteLine($"[AddClientToRoom] Пользователь {user.UserId} добавлен в комнату {user.RoomId}");
-            }
-            return list;
-        });
+            Console.WriteLine($"[AddClientToRoom] Пользователь {user.UserId} добавлен в комнату {user.RoomId}");
+        }
+        else
+        {
+            Console.WriteLine($"[AddClientToRoom] Пользователь {user.UserId} уже существует в комнате {user.RoomId}");
+        }
     }
 
     public void RemoveClientFromRoom(User user)
     {
-        if (_rooms.ContainsKey(user.RoomId))
+        if (_rooms.TryGetValue(user.RoomId, out var users))
         {
-            _rooms[user.RoomId].RemoveAll(u => u.UserId == user.UserId);
+            users.TryRemove(user.UserId, out _);
             Console.WriteLine($"[RemoveClientFromRoom] Пользователь {user.UserId} покинул комнату {user.RoomId}");
+
+            if (users.Count == 1)
+            {
+                var lastUser = users.Values.FirstOrDefault();
+                if (lastUser != null)
+                {
+                    users.TryRemove(lastUser.UserId, out _);
+                    Console.WriteLine($"[RemoveClientFromRoom] Последний пользователь {lastUser.UserId} исключён из комнаты {user.RoomId}");
+                }
+            }
 
             CheckAndRemoveEmptyRoom(user.RoomId);
         }
@@ -36,7 +45,7 @@ public class RoomManager
 
     private void CheckAndRemoveEmptyRoom(string roomId)
     {
-        if (_rooms.TryGetValue(roomId, out var users) && users.Count == 0)
+        if (_rooms.TryGetValue(roomId, out var users) && users.IsEmpty)
         {
             _rooms.TryRemove(roomId, out _);
             Console.WriteLine($"❌ Комната {roomId} удалена");
@@ -45,20 +54,25 @@ public class RoomManager
 
     public User? GetUserById(string userId, string roomId)
     {
-        return _rooms.TryGetValue(roomId, out var users) ? users.FirstOrDefault(u => u.UserId == userId) : null;
+        return _rooms.TryGetValue(roomId, out var users) && users.TryGetValue(userId, out var user)
+            ? user
+            : null;
     }
 
     public List<User> GetClientsInRoom(string roomId)
     {
-        return _rooms.TryGetValue(roomId, out var users) ? users : new List<User>();
+        return _rooms.TryGetValue(roomId, out var users)
+            ? users.Values.ToList()
+            : new List<User>();
     }
+
     public string? GetUserRoomId(string userId)
     {
         foreach (var room in _rooms)
         {
-            if (room.Value.Any(u => u.UserId == userId))
+            if (room.Value.ContainsKey(userId))
             {
-                return room.Key; 
+                return room.Key;
             }
         }
         return null;
@@ -71,7 +85,55 @@ public class RoomManager
         {
             user.UserEndPoin = endPoint;
             Console.WriteLine($"[UpdateUserEndPoint] Обновлён IPEndPoint для {user.UserId}: {endPoint}");
+            PrintAllRoomsInfo();
         }
+    }
+
+    public void PrintAllRoomsInfo()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("\n╔════════════════════════════════════╗");
+        Console.WriteLine("║ ТЕКУЩЕЕ СОСТОЯНИЕ КОМНАТ И УЧАСТНИКОВ ║");
+        Console.WriteLine("╚════════════════════════════════════╝");
+        Console.ResetColor();
+
+        Console.WriteLine($"Всего комнат: {_rooms.Count}\n");
+
+        foreach (var room in _rooms.OrderBy(r => r.Key))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[[ КОМНАТА {room.Key} ]]");
+            Console.ResetColor();
+
+            if (!room.Value.Any())
+            {
+                Console.WriteLine("  (нет участников)");
+                continue;
+            }
+
+            foreach (var user in room.Value.Values.OrderBy(u => u.UserId))
+            {
+                Console.WriteLine($"\n  Пользователь: [ID: {user.UserId}]");
+
+                if (user.UserEndPoin != null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"  ├─ EndPoint: {user.UserEndPoin.Address}:{user.UserEndPoin.Port}");
+                    Console.WriteLine($"  └─ Статус: активен");
+                    Console.ResetColor();
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"  └─ EndPoint: не установлен");
+                    Console.ResetColor();
+                }
+            }
+
+            Console.WriteLine();
+        }
+
+        Console.WriteLine();
     }
 
     public async Task BroadcastToRoomAsync(string roomId, byte[] data, User sender, UdpClient udpClient)
@@ -85,7 +147,7 @@ public class RoomManager
                 if (user.UserId != sender.UserId && user.UserEndPoin != null)
                 {
                     await udpClient.SendAsync(data, data.Length, user.UserEndPoin);
-                    Console.WriteLine($"[BroadcastToRoomAsync] Отправка данных клиенту {user.UserEndPoin} от {sender.UserEndPoin}");
+                    Console.WriteLine($"[BroadcastToRoomAsync] Отправка данных клиенту {user.UserEndPoin} от {sender.UserEndPoin} в комнату {roomId}");
                 }
             }
         }
@@ -94,26 +156,4 @@ public class RoomManager
             Console.WriteLine($"[BroadcastToRoomAsync] Ошибка при отправке данных: {ex.Message}");
         }
     }
-    public async Task EchoTestAsync(byte[] data, User sender, UdpClient udpClient)
-    {
-        try
-        {
-            if (sender.UserEndPoin != null)
-            {
-                Console.WriteLine($"[EchoTestAsync] Отправка тестового ответа клиенту {sender.UserEndPoin}");
-
-                byte[] response = Encoding.UTF8.GetBytes("TEST_RESPONSE");
-                await udpClient.SendAsync(response, response.Length, sender.UserEndPoin);
-            }
-            else
-            {
-                Console.WriteLine($"[EchoTestAsync] У клиента {sender.UserId} нет IPEndPoint!");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[EchoTestAsync] Ошибка при отправке тестового ответа: {ex.Message}");
-        }
-    }
-
 }

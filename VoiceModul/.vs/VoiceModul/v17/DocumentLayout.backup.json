@@ -3,20 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\models\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\models\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\voiceudpserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\voiceudpserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\signalr\\voicehub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\signalr\\voicehub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\models\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|solutionrelative:voicemodul\\models\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{BF0C238E-A3DA-4073-8BE2-E66416BE6BAE}|VoiceModul\\VoiceModul.csproj|c:\\users\\proroksamboy\\desktop\\testics\\voicemodul\\voicemodul\\voicehttpserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -30,23 +26,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "VoiceHub.cs",
-              "DocumentMoniker": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\SignalR\\VoiceHub.cs",
-              "RelativeDocumentMoniker": "VoiceModul\\SignalR\\VoiceHub.cs",
-              "ToolTip": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\SignalR\\VoiceHub.cs",
-              "RelativeToolTip": "VoiceModul\\SignalR\\VoiceHub.cs",
-              "ViewState": "AgIAABkAAAAAAAAAAAAAADUAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-01T13:03:13.256Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\Program.cs",
               "RelativeDocumentMoniker": "VoiceModul\\Program.cs",
@@ -54,7 +38,20 @@
               "RelativeToolTip": "VoiceModul\\Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-01T11:42:21.416Z"
+              "WhenOpened": "2025-04-12T14:57:10.415Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "RoomManager.cs",
+              "DocumentMoniker": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\Models\\RoomManager.cs",
+              "RelativeDocumentMoniker": "VoiceModul\\Models\\RoomManager.cs",
+              "ToolTip": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\Models\\RoomManager.cs",
+              "RelativeToolTip": "VoiceModul\\Models\\RoomManager.cs",
+              "ViewState": "AgIAAHsAAAAAAAAAAAAhwJcAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-12T14:08:11.236Z"
             },
             {
               "$type": "Document",
@@ -64,33 +61,20 @@
               "RelativeDocumentMoniker": "VoiceModul\\VoiceUdpServer.cs",
               "ToolTip": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\VoiceUdpServer.cs",
               "RelativeToolTip": "VoiceModul\\VoiceUdpServer.cs",
-              "ViewState": "AgIAAEYAAAAAAAAAAAAgwCIAAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-01T11:07:50.964Z",
+              "WhenOpened": "2025-04-12T14:04:27.969Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "RoomManager.cs",
-              "DocumentMoniker": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\Models\\RoomManager.cs",
-              "RelativeDocumentMoniker": "VoiceModul\\Models\\RoomManager.cs",
-              "ToolTip": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\Models\\RoomManager.cs",
-              "RelativeToolTip": "VoiceModul\\Models\\RoomManager.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADsAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-01T10:22:54.614Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 3,
               "Title": "VoiceHttpServer.cs",
               "DocumentMoniker": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\VoiceHttpServer.cs",
               "RelativeDocumentMoniker": "VoiceModul\\VoiceHttpServer.cs",
               "ToolTip": "C:\\Users\\ProrokSamBoy\\Desktop\\Testics\\VoiceModul\\VoiceModul\\VoiceHttpServer.cs",
               "RelativeToolTip": "VoiceModul\\VoiceHttpServer.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAA3AAAAAAAAAA==",
+              "ViewState": "AgIAAGkAAAAAAAAAAAAgwIgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-01T10:19:48.721Z"
             }

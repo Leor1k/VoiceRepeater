@@ -8,12 +8,13 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.WebHost.UseUrls("http://0.0.0.0:5001");
 
-        Console.WriteLine("----------Версия хайп не реальный 6.1.2 Не приходит ничего вообще----------");
+        Console.WriteLine("----------Версия хайп не реальный 7.3.1 Так почти всё заработало----------");
 
         builder.Services.AddSingleton<RoomManager>();
         builder.Services.AddSignalR();
 
         builder.Services.AddSingleton<VoiceUdpServer>();
+        builder.Services.AddSingleton<VoiceHub>();
 
         builder.Services.AddHostedService<VoiceUdpBackgroundService>();
         builder.Services.AddControllers();

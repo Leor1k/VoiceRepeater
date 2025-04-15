@@ -46,39 +46,34 @@ public class VoiceUdpServer
                 string userId = BitConverter.ToInt32(receivedData, 0).ToString();
                 Console.WriteLine($"[VoiceUdpServer] Получены данные от {sender} (UserId: {userId}), {receivedData.Length} байт");
 
-                if (!_userCache.TryGetValue(userId, out User? user))
+                string? roomId = _roomManager.GetUserRoomId(userId);
+                if (roomId == null)
                 {
-                    string? roomId = _roomManager.GetUserRoomId(userId);
-                    if (roomId == null)
-                    {
-                        Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден в комнатах. Игнорируем пакет.");
-                        continue;
-                    }
-                    user = _roomManager.GetUserById(userId, roomId);
-                    if (user != null)
-                    {
-                        _userCache[userId] = user;
-                        Console.WriteLine($"[VoiceUdpServer] Добавлен в кеш: {user.UserId}");
-                        await _hubContext.Clients.Group(userId).SendAsync("ReceiveUdpPort", sender.Port);
-                        Console.WriteLine($"Отправлен UDP-порт {sender.Port} пользователю {userId}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден. Игнорируем пакет.");
-                        continue;
-                    }
+                    Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден в комнатах. Игнорируем пакет.");
+                    continue;
                 }
 
-                if (user.UserEndPoin == null)
+                User? user = _roomManager.GetUserById(userId, roomId);
+                if (user == null)
                 {
+                    Console.WriteLine($"[VoiceUdpServer] Пользователь {userId} не найден в комнате {roomId}. Игнорируем пакет.");
+                    continue;
+                }
+
+                _userCache.TryAdd(userId, user);
+
+                if (user.UserEndPoin == null || !user.UserEndPoin.Equals(sender))
+                {
+                    Console.WriteLine($"[VoiceUdpServer] Обновляем EndPoint пользователя {user.UserId} на {sender.Address}:{sender.Port}");
                     _roomManager.UpdateUserEndPoint(user.UserId, user.RoomId, sender);
 
                     await _hubContext.Clients.Group(user.UserId)
                         .SendAsync("ReceiveUdpPort", sender.Port);
+
                     Console.WriteLine($"[VoiceUdpServer] Отправлен UDP-порт {sender.Port} пользователю {user.UserId}");
                 }
-                await _roomManager.EchoTestAsync(receivedData, user, _udpServer);
-                //await _roomManager.BroadcastToRoomAsync(user.RoomId, receivedData, user, _udpServer);
+
+                await _roomManager.BroadcastToRoomAsync(user.RoomId, receivedData, user, _udpServer);
             }
             catch (Exception ex)
             {
@@ -86,4 +81,6 @@ public class VoiceUdpServer
             }
         }
     }
+
+
 }

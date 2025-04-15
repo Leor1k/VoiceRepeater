@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
+using VoiceModul.Models;
 using VoiceModul.Requessts;
 
 namespace VoiceModul.SignalR
@@ -9,10 +9,14 @@ namespace VoiceModul.SignalR
     {
         private static ConcurrentDictionary<string, VoiceCallSession> _activeCalls = new();
         private readonly IHubContext<VoiceHub> _hubContext;
-        public VoiceHub(IHubContext<VoiceHub> hubContext)
+        private readonly RoomManager _roomManager;
+
+        public VoiceHub(IHubContext<VoiceHub> hubContext, RoomManager roomManager)
         {
             _hubContext = hubContext;
+            _roomManager = roomManager; 
         }
+
         public override async Task OnConnectedAsync()
         {
             var userId = Context.GetHttpContext().Request.Query["userId"];
@@ -20,6 +24,7 @@ namespace VoiceModul.SignalR
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, userId);
                 Console.WriteLine($"Пользователь {userId} подключился к VoiceHub");
+                Console.WriteLine($"=======================");
             }
             await base.OnConnectedAsync();
         }
@@ -31,6 +36,14 @@ namespace VoiceModul.SignalR
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, userId);
                 Console.WriteLine($"Пользователь {userId} отключился от VoiceHub");
+
+                string? roomId = _roomManager.GetUserRoomId(userId);
+                if (roomId != null)
+                {
+                    var user = new User(userId, roomId);
+                    _roomManager.RemoveClientFromRoom(user);
+                    Console.WriteLine($"[OnDisconnectedAsync] Пользователь {userId} удалён из комнаты {roomId}");
+                }
             }
             await base.OnDisconnectedAsync(exception);
         }
@@ -41,6 +54,7 @@ namespace VoiceModul.SignalR
             var callSession = new VoiceCallSession(callRequest.RoomId, callRequest.CallerId, callRequest.participantIds);
             _activeCalls[callRequest.RoomId] = callSession;
             Console.WriteLine($"[WebStartCall] Пользователь {callRequest.CallerId} начал звонок в комнате {callRequest.RoomId}");
+
             foreach (var participantId in callRequest.participantIds.Where(id => id != callRequest.CallerId))
             {
                 await Clients.Group(participantId).SendAsync("IncomingCall", callRequest.RoomId, callRequest.CallerId);

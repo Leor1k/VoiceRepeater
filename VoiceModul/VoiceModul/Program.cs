@@ -8,7 +8,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.WebHost.UseUrls("http://0.0.0.0:5001");
 
-        Console.WriteLine("----------Версия хайп не реальный 7.3.1 Так почти всё заработало----------");
+        Console.WriteLine("----------Версия хайп не реальный 7.3.2 Так почти всё заработало----------");
 
         builder.Services.AddSingleton<RoomManager>();
         builder.Services.AddSignalR();

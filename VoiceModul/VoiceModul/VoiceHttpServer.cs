@@ -58,14 +58,17 @@ public class VoiceController : ControllerBase
         Console.WriteLine($"[ConfirmCall] Пользователь {confirmUser.UserId} успешно добавлен в {confirmUser.RoomId}");
 
         var roomUsers = _roomManager.GetClientsInRoom(request.RoomId);
-
+        List<string> listID = new List<string>();
         foreach (var user in roomUsers.Where(u => u.UserId != request.UserId))
         {
             await _hubContext.Clients.Group(user.UserId)
                 .SendAsync("UserJoinedCall", request.RoomId, request.UserId);
             Console.WriteLine($"[ConfirmCall] Уведомление UserJoinedCall отправлено пользователю {user.UserId}");
+            listID.Add(user.UserId);
         }
 
+        await _hubContext.Clients.Group(request.UserId).SendAsync("UsersDataForCall",listID);
+        Console.WriteLine($"[ConfirmCall] Отправка данных о состоящих в звонке пользователю");
         Console.WriteLine($"===========[confirm-call]===========");
         _roomManager.PrintAllRoomsInfo();
         return Ok($"[ConfirmCall] Пользователь {confirmUser.UserId} принял приглашение в комнату {confirmUser.RoomId}.");
